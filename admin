@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.T.Lee CNCET | AI Liquidity Terminal v7</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --bg-deep: #0a0a0a;
+            --surface: #141414;
+            --accent: #ffffff;
+            --accent-dim: #222222;
+            --neon-green: #00ff85;
+            --neon-blue: #00e0ff;
+            --danger: #ff3e3e;
+            --text-primary: #ffffff;
+            --text-secondary: #808080;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-deep); color: var(--text-primary); overflow: hidden; height: 100vh; }
+
+        /* Notification Bar */
+        #notification-bar {
+            position: fixed; top: -60px; left: 50%; transform: translateX(-50%);
+            width: auto; min-width: 300px; padding: 15px 25px; border-radius: 10px;
+            background: var(--surface); border-left: 5px solid var(--neon-green);
+            color: white; z-index: 9999; transition: top 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 0.9rem;
+        }
+        #notification-bar.show { top: 20px; }
+
+        .view-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: var(--bg-deep); display: none; padding: 25px; overflow-y: auto; z-index: 10;
+        }
+        .active { display: block; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* AI Monitor Pulse (Green) */
+        .ai-pulse { width: 12px; height: 12px; background: var(--neon-green); border-radius: 50%; display: inline-block; position: relative; }
+        .ai-pulse::after {
+            content: ""; position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            background: inherit; animation: pulse-ring 1.5s infinite; opacity: 0.6;
+        }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(3.5); opacity: 0; } }
+
+        /* Scanning Animation */
+        #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 20px; overflow: hidden; border: 1px solid var(--accent-dim); background: #000; position: relative; }
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 133, 0.2) 50%);
+            background-size: 100% 4px; z-index: 11; pointer-events: none; animation: scanMove 2s linear infinite;
+        }
+        .laser {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--neon-green); box-shadow: 0 0 15px var(--neon-green);
+            z-index: 12; pointer-events: none; animation: laserMove 2s ease-in-out infinite;
+        }
+        @keyframes scanMove { from { background-position: 0 0; } to { background-position: 0 100%; } }
+        @keyframes laserMove { 0%, 100% { top: 0%; } 50% { top: 100%; } }
+
+        /* AI Monitoring Intelligence Box */
+        .ai-monitor-box {
+            background: rgba(0, 255, 133, 0.03); border: 1px solid rgba(0, 255, 133, 0.1);
+            border-radius: 15px; padding: 15px; margin: 20px 0; font-family: 'Courier New', monospace;
+        }
+        .ai-status-row { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--neon-green); margin-bottom: 5px; }
+        #ai-logs { height: 60px; overflow: hidden; font-size: 0.65rem; color: #4a8d6e; }
+
+        /* Checkmark Animation */
+        .checkmark-wrapper { display: none; margin: 20px auto; }
+        .checkmark { width: 80px; height: 80px; border-radius: 50%; display: block; stroke-width: 2; stroke: var(--neon-green); stroke-miterlimit: 10; animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both; }
+        .checkmark__circle { stroke-dasharray: 166; stroke-dashoffset: 166; stroke-width: 2; stroke-miterlimit: 10; stroke: var(--neon-green); fill: none; animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
+        .checkmark__check { transform-origin: 50% 50%; stroke-dasharray: 48; stroke-dashoffset: 48; animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards; }
+        @keyframes stroke { 100% { stroke-dashoffset: 0; } }
+        @keyframes scale { 0%, 100% { transform: none; } 50% { transform: scale3d(1.1, 1.1, 1); } }
+        @keyframes fill { 100% { box-shadow: inset 0px 0px 0px 40px rgba(0, 255, 133, 0.1); } }
+
+        .login-frame { max-width: 400px; margin: 100px auto; padding: 40px; background: var(--surface); border-radius: 30px; border: 1px solid var(--accent-dim); text-align: center; }
+        .primary-btn { width: 100%; padding: 20px; background: var(--accent); color: #000; border: none; font-weight: 900; border-radius: 15px; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        input { width: 100%; padding: 20px; margin-bottom: 12px; background: #000; border: 1px solid var(--accent-dim); color: #fff; border-radius: 15px; outline: none; }
+        
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .search-box { width: 250px; position: relative; }
+        .search-box input { padding: 12px 15px; font-size: 0.8rem; margin-bottom: 0; }
+        .stack-card { background: var(--surface); padding: 20px; border-radius: 20px; border: 1px solid var(--accent-dim); cursor: pointer; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { color: var(--text-secondary); font-size: 0.7rem; text-align: left; padding: 15px; border-bottom: 1px solid var(--accent-dim); }
+        td { padding: 15px; font-size: 0.85rem; border-bottom: 1px solid #1a1a1a; }
+    </style>
+</head>
+<body>
+
+    <div id="notification-bar">Terminal Synchronized</div>
+
+    <div id="success-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 5000; display: none; flex-direction: column; justify-content: center; align-items: center;">
+        <div class="checkmark-wrapper" id="check-anim">
+            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+        </div>
+        <h2 style="color:var(--neon-green); margin-top:20px; letter-spacing: 5px; font-size:0.8rem;" id="success-text">SYSTEM AUTHORIZING...</h2>
+    </div>
+
+    <div id="screen-login" class="view-screen active">
+        <div class="login-frame">
+            <h1 style="letter-spacing: 5px; font-size: 1rem; color: var(--text-secondary); margin-bottom: 30px;">
+                    P.T.Lee CNCET VAULT <span class="ai-pulse"></span>
+            </h1>
+            <input type="text" id="admin_user" placeholder="USERNAME">
+            <input type="password" id="admin_pass" placeholder="SECURITY KEY">
+            <button class="primary-btn" onclick="tryLogin()">Access Mainframe</button>
+            <p style="margin-top: 20px; font-size: 0.6rem; color: #444;">SECURED BY AI CORE 2026</p>
+        </div>
+    </div>
+
+    <div id="screen-dash" class="view-screen">
+        <div class="header-controls">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="ai-pulse"></span>
+                <p style="font-size: 0.6rem; letter-spacing: 2px; color: var(--neon-green);">AI MONITOR ONLINE</p>
+            </div>
+            <p id="live-clock" style="font-size: 0.7rem; color: var(--text-secondary);"></p>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <p style="font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 2px;">RESERVE CAPITAL</p>
+            <h2 id="grand-total" style="font-size: 2.5rem; font-weight: 200;">₹ 1,00,000.00</h2>
+        </div>
+
+        <div class="ai-monitor-box">
+            <div class="ai-status-row">
+                <span>THREAT LEVEL: LOW</span>
+                <span id="ai-load">CPU: 12%</span>
+            </div>
+            <div id="ai-logs">
+                > Initializing Neural Safeguards...<br>
+                > Port 8080 Secured...<br>
+                > Waiting for biometric input...
+            </div>
+        </div>
+
+        <div id="reader">
+            <div class="scan-line"></div>
+            <div class="laser"></div>
+        </div>
+
+        <div style="max-width: 500px; margin: 0 auto;">
+            <div class="stack-card" onclick="switchPage('screen-history')">
+                <div><h3>Transaction Audit</h3><p style="color:var(--text-secondary); font-size:0.7rem">View all historical outflows</p></div>
+                <div>▤</div>
+            </div>
+            <button class="primary-btn" style="background:transparent; border:1px solid #222; color:#444; margin-top:10px;" onclick="location.reload()">Terminate Session</button>
+        </div>
+    </div>
+
+    <div id="screen-withdrawal" class="view-screen">
+        <p onclick="switchPage('screen-dash')" style="cursor:pointer; color:var(--text-secondary); margin-bottom:20px;">← ABORT SCAN</p>
+        <div style="max-width: 400px; margin: 0 auto; text-align: center;">
+            <h4 style="margin-bottom: 20px; letter-spacing: 2px; color: var(--neon-green);">DISBURSEMENT PORTAL</h4>
+            <input type="text" id="draw_roll" placeholder="ID NUMBER" readonly style="border-color: var(--neon-green); color: var(--neon-green);">
+            <input type="number" id="draw_amount" placeholder="ENTER AMOUNT (₹)">
+            <button class="primary-btn" style="background:var(--neon-green); color: black;" onclick="processWithdrawal()">Authorize Debit</button>
+        </div>
+    </div>
+
+    <div id="screen-history" class="view-screen">
+        <div class="header-controls">
+            <p onclick="switchPage('screen-dash')" style="cursor:pointer; color:var(--text-secondary)">← BACK</p>
+            <div class="search-box">
+                <input type="text" id="ledgerSearch" placeholder="Search by Roll..." onkeyup="filterLedger()">
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>TIME</th><th>ID / ROLL</th><th>AMOUNT</th></tr></thead>
+            <tbody id="history-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const DB_KEY = 'cncet_terminal_v7_withdraw';
+        const INITIAL_VAULT = 100000;
+        let database = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+        let html5QrCode;
+
+        // Clock Update
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+        }, 1000);
+
+        // AI Log Simulation
+        const logs = [
+            "> Analyzing liquidity trends...",
+            "> Encrypting transaction packet...",
+            "> Monitoring external IP threats...",
+            "> AI Core temperature stable...",
+            "> Cross-referencing ID database...",
+            "> Anti-fraud layers active..."
+        ];
+        setInterval(() => {
+            const logBox = document.getElementById('ai-logs');
+            const randomLog = logs[Math.floor(Math.random() * logs.length)];
+            logBox.innerHTML = `> ${randomLog}<br>` + logBox.innerHTML.split('<br>').slice(0, 3).join('<br>');
+            document.getElementById('ai-load').innerText = `CPU: ${Math.floor(Math.random() * 20) + 5}%`;
+        }, 4000);
+
+        function showNotification(msg) {
+            const bar = document.getElementById('notification-bar');
+            bar.innerText = msg;
+            bar.classList.add('show');
+            setTimeout(() => bar.classList.remove('show'), 3000);
+        }
+
+        function tryLogin() {
+            if(document.getElementById('admin_user').value === 'admin' && document.getElementById('admin_pass').value === '2026') {
+                switchPage('screen-dash');
+                showNotification("Encryption Verified. Welcome.");
+                setTimeout(initScanner, 500);
+            } else { alert("INVALID CREDENTIALS"); }
+        }
+
+        function initScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: 250 }, (text) => {
+                document.getElementById('draw_roll').value = text;
+                showNotification("ID Scanned Successfully");
+                html5QrCode.pause();
+                switchPage('screen-withdrawal');
+            }).catch(e => console.error(e));
+        }
+
+        function processWithdrawal() {
+            const r = document.getElementById('draw_roll').value;
+            const a = document.getElementById('draw_amount').value;
+            if(!a || parseFloat(a) <= 0) return alert("Enter Amount");
+
+            const overlay = document.getElementById('success-overlay');
+            const check = document.getElementById('check-anim');
+            const txt = document.getElementById('success-text');
+
+            overlay.style.display = 'flex';
+            
+            setTimeout(() => { txt.innerText = "BYPASSING FIREWALLS..."; }, 1000);
+
+            setTimeout(() => {
+                check.style.display = 'block';
+                txt.innerText = "TRANSACTION SUCCESS";
+                
+                database.push({ 
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                    roll: r, 
+                    amount: parseFloat(a) 
+                });
+                localStorage.setItem(DB_KEY, JSON.stringify(database));
+            }, 2500);
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                check.style.display = 'none';
+                txt.innerText = "SYSTEM AUTHORIZING...";
+                showNotification(`Disbursed ₹${a} to Ledger`);
+                switchPage('screen-dash');
+                if(html5QrCode) html5QrCode.resume();
+            }, 4500);
+        }
+
+        function filterLedger() {
+            const query = document.getElementById('ledgerSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#history-body tr');
+            rows.forEach(row => {
+                row.style.display = row.cells[1].innerText.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        function switchPage(id) {
+            document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            refreshData();
+        }
+
+        function refreshData() {
+            const total = database.reduce((acc, obj) => acc + (obj.amount || 0), 0);
+            document.getElementById('grand-total').innerText = '₹ ' + (INITIAL_VAULT - total).toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+            const body = document.getElementById('history-body');
+            body.innerHTML = database.slice().reverse().map(item => `
+                <tr>
+                    <td>${item.time}</td>
+                    <td>${item.roll}</td>
+                    <td style="color:var(--danger)">-₹${item.amount}</td>
+                </tr>
+            `).join('');
+        }
+
+        refreshData();
+    </script>
+</body>
+</html>
