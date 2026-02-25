@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.T.lee CNCET Canteen - Quick Payment System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Base Styles --- */
+        .toast {
+            background: #111111;
+            border: 2px solid #333333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .toast::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; }
+        .toast.success::before { background: #00ff00; }
+        .toast.error::before { background: #ff4444; }
+        .toast.info::before { background: #00aaff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .live-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0a0a0a;
+            border-top: 2px solid #333333;
+            padding: 10px 0;
+            overflow: hidden;
+            z-index: 100;
+        }
+        .ticker-content { display: flex; animation: scroll 30s linear infinite; white-space: nowrap; }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .ticker-item { display: inline-flex; align-items: center; padding: 0 30px; color: #888888; font-size: 14px; }
+
+        .sound-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a1a1a;
+            border: 2px solid #333333;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 200;
+            transition: all 0.3s;
+        }
+        .sound-toggle:hover { border-color: #ffffff; transform: scale(1.1); }
+
+        .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); }
+        .login-box { background: #111111; padding: 40px; border-radius: 15px; border: 2px solid #333333; width: 400px; text-align: center; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; color: #cccccc; font-size: 14px; text-transform: uppercase; }
+        .input-group input, .input-group select { width: 100%; padding: 12px; background: #000000; border: 1px solid #444444; border-radius: 8px; color: #ffffff; font-size: 16px; transition: border-color 0.3s; }
+        .input-group input:focus { border-color: #00aaff; outline: none; }
+        
+        .btn { width: 100%; padding: 15px; background: #ffffff; color: #000000; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.3s; }
+        .btn:hover { background: #cccccc; transform: translateY(-2px); }
+
+        .dashboard { display: none; min-height: 100vh; background: #000000; padding-bottom: 60px; }
+        .header {
+            background: #111111;
+            padding: 15px 20px;
+            border-bottom: 2px solid #333333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-info span { color: #888888; font-size: 14px; }
+        .logout-btn { padding: 8px 15px; background: #333333; color: #ffffff; border: 1px solid #555555; border-radius: 5px; cursor: pointer; }
+        
+        .lang-selector { background: #000; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+
+        .balance-section { background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%); padding: 40px; text-align: center; border-bottom: 2px solid #333333; }
+        .balance-label { font-size: 14px; color: #888888; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 10px; }
+        .balance-amount { font-size: 72px; font-weight: bold; color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+        .balance-amount.negative { color: #ff4444; }
+
+        .nav-menu { display: flex; justify-content: center; gap: 20px; padding: 30px; background: #0a0a0a; flex-wrap: wrap; }
+        .nav-btn { padding: 15px 30px; background: #1a1a1a; color: #ffffff; border: 2px solid #333333; border-radius: 10px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .nav-btn:hover { background: #333333; border-color: #ffffff; }
+        .nav-btn.active { background: #ffffff; color: #000000; border-color: #ffffff; }
+
+        .page-section { display: none; padding: 40px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.5s; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .section-title { font-size: 32px; margin-bottom: 30px; text-transform: uppercase; border-bottom: 2px solid #333333; padding-bottom: 15px; }
+
+        .qr-container { background: #111111; padding: 40px; border-radius: 15px; border: 2px solid #333333; text-align: center; margin-bottom: 30px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .qr-code { width: 250px; height: 250px; background: #ffffff; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 4px solid #00ff00; box-shadow: 0 0 30px rgba(0, 255, 0, 0.3); overflow: hidden; }
+        .qr-code img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .withdraw-qr-code { border-color: #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.3); }
+
+        .upi-pay-btn { background: linear-gradient(135deg, #5f259f, #9c27b0); color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .upi-pay-btn:hover { background: linear-gradient(135deg, #4a1d7a, #7b1f8a); transform: translateY(-2px); }
+
+        .transaction-list { background: #111111; border-radius: 15px; border: 2px solid #333333; overflow: hidden; }
+        .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #222222; cursor: pointer; }
+        .transaction-item:hover { background: #1a1a1a; }
+        .transaction-type { font-size: 12px; text-transform: uppercase; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+        .transaction-type.deposit { background: #004400; color: #00ff00; }
+        .transaction-type.withdraw { background: #440000; color: #ff4444; }
+        
+        /* AI Assistant Styles */
+        .ai-toggle-btn {
+            position: fixed; bottom: 80px; right: 20px; width: 50px; height: 50px;
+            background: linear-gradient(135deg, #00aaff, #00ff00); border-radius: 50%; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; color: #000;
+            box-shadow: 0 5px 15px rgba(0, 170, 255, 0.4); z-index: 200; transition: transform 0.3s;
+        }
+        .ai-toggle-btn:hover { transform: scale(1.1); }
+        .ai-chat-widget {
+            position: fixed; bottom: 150px; right: 20px; width: 350px; height: 500px;
+            background: #111111; border: 2px solid #00aaff; border-radius: 15px; display: none; flex-direction: column;
+            z-index: 200; box-shadow: 0 10px 30px rgba(0, 170, 255, 0.2); overflow: hidden;
+        }
+        .ai-chat-widget.active { display: flex; }
+        .ai-chat-header { background: #0a0a0a; padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .ai-chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-message { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .chat-message.bot { background: #1a1a1a; border: 1px solid #333; align-self: flex-start; }
+        .chat-message.user { background: #00aaff; color: #000; align-self: flex-end; }
+        .ai-chat-input-area { padding: 15px; border-top: 1px solid #333; display: flex; gap: 10px; }
+        .ai-chat-input { flex: 1; padding: 10px; background: #000; border: 1px solid #444; border-radius: 5px; color: #fff; }
+
+        /* Staff Terminal Styles */
+        #staffTerminal {
+            display: none; min-height: 100vh; background: linear-gradient(135deg, #1a0000 0%, #330000 100%);
+            justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 20px;
+        }
+        .staff-box {
+            background: #111; padding: 40px; border-radius: 15px; border: 2px solid #ff4444;
+            max-width: 400px; width: 100%; box-shadow: 0 0 50px rgba(255, 0, 0, 0.2);
+        }
+        .staff-box h2 { color: #ff4444; margin-bottom: 20px; text-transform: uppercase; }
+
+        .error-msg { color: #ff4444; font-size: 12px; margin-top: 5px; display: none; text-align: center; }
+
+        @media (max-width: 768px) {
+            .balance-amount { font-size: 48px; }
+            .ai-toggle-btn { bottom: 80px; right: 10px; }
+            .sound-toggle { bottom: 20px; right: 10px; }
+            .ai-chat-widget { width: 95%; height: 50%; bottom: 140px; right: 2.5%; }
+            .header { flex-direction: column; gap: 10px; }
+            .user-info { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="toast-container" id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 2000;"></div>
+    
+    <!-- Sound Control -->
+    <div class="sound-toggle" id="soundToggle" onclick="toggleSound()" title="Toggle Sound">
+        <span id="soundIcon">🔊</span>
+    </div>
+    <button class="ai-toggle-btn" id="aiToggleBtn" onclick="toggleChat()">🤖</button>
+
+    <!-- 1. STAFF TERMINAL -->
+    <div id="staffTerminal">
+        <div class="staff-box">
+            <h2>🛑 Staff Terminal</h2>
+            <p style="margin-bottom: 10px; color: #aaa;">Withdraw Request For:</p>
+            <h3 id="staffStudentName" style="color: #fff; margin-bottom: 5px;">Student Name</h3>
+            <p id="staffStudentId" style="color: #666; font-size: 12px; margin-bottom: 20px;">ID: USER123</p>
+            
+            <form id="staffWithdrawForm" onsubmit="processStaffWithdraw(event)">
+                <div class="input-group">
+                    <label>Enter Amount to Deduct (₹)</label>
+                    <input type="number" id="staffAmount" required min="1" placeholder="Amount" style="border-color: #ff4444; text-align: center; font-size: 24px;">
+                </div>
+                <button type="submit" class="btn" style="background: #ff4444;">Confirm Deduction</button>
+            </form>
+            <button onclick="location.href=location.pathname" class="btn" style="background: #333; margin-top: 10px;">Cancel / Exit</button>
+        </div>
+    </div>
+
+    <!-- 2. LOGIN PAGE -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <h1>P.T.lee CNCET</h1>
+            <h2 data-lang="login_subtitle">Canteen Quick Payment System</h2>
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                
+                <!-- Name Input (Added) -->
+                <div class="input-group">
+                    <label data-lang="label_name">Student Name</label>
+                    <input type="text" id="loginName" placeholder="Enter your full name" required>
+                </div>
+
+                <!-- Register Number Input -->
+                <div class="input-group">
+                    <label data-lang="label_roll">Register Number</label>
+                    <input type="text" id="loginRoll" placeholder="e.g. 2026001" required>
+                </div>
+
+                <!-- Password Input -->
+                <div class="input-group">
+                    <label data-lang="label_pass">Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter your Password" required>
+                    <div id="loginError" class="error-msg">Invalid Name, Register Number or Password</div>
+                </div>
+
+                <button type="submit" class="btn" data-lang="btn_login">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. MAIN DASHBOARD -->
+    <div id="dashboard" class="dashboard">
+        <div class="header">
+            <h1 data-lang="header_title">Quick Payment System</h1>
+            <div class="user-info">
+                <select id="langSelector" class="lang-selector" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="ta">தமிழ்</option>
+                    <option value="hi">हिन्दी</option>
+                </select>
+                <span id="displayName">Student Name</span>
+                <span>|</span>
+                <span id="displayRoll">Roll No</span>
+                <button class="logout-btn" onclick="logout()" data-lang="btn_logout">Logout</button>
+            </div>
+        </div>
+
+        <div class="balance-section">
+            <div class="balance-label" data-lang="label_balance">Current Balance</div>
+            <div id="balanceAmount" class="balance-amount">₹0.00</div>
+        </div>
+
+        <div class="nav-menu">
+            <button class="nav-btn active" onclick="showPage('home')" data-lang="nav_home">Dashboard</button>
+            <button class="nav-btn" onclick="showPage('deposit')" data-lang="nav_deposit">Deposit</button>
+            <button class="nav-btn" onclick="showPage('withdraw')" data-lang="nav_withdraw">Withdraw</button>
+            <button class="nav-btn" onclick="showPage('history')" data-lang="nav_history">History</button>
+        </div>
+
+        <!-- Home Page -->
+        <div id="home" class="page-section active">
+            <h2 class="section-title" data-lang="sec_dashboard">Student Dashboard</h2>
+            <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333;">
+                <h3 data-lang="sec_student_info">Student Information</h3>
+                <p><strong data-lang="label_name">Name</strong>: <span id="homeName">-</span></p>
+                <p><strong data-lang="label_roll">Roll No</strong>: <span id="homeRoll">-</span></p>
+                <p><strong>User ID:</strong> <span id="userId">-</span></p>
+                <p><strong>Phone:</strong> <span id="homePhone">-</span></p>
+                <p><strong>Email:</strong> <span id="homeEmail">-</span></p>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px;">
+                <div style="text-align: center; background: #1a1a1a; padding: 20px; border-radius: 10px;">
+                    <h3 style="color: #00ff00; font-size: 32px;" id="totalDeposits">₹0</h3>
+                    <p data-lang="label_total_dep">Total Deposited</p>
+                </div>
+                <div style="text-align: center; background: #1a1a1a; padding: 20px; border-radius: 10px;">
+                    <h3 style="color: #ff4444; font-size: 32px;" id="totalWithdrawals">₹0</h3>
+                    <p data-lang="label_total_spent">Total Spent</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deposit Page -->
+        <div id="deposit" class="page-section">
+            <h2 class="section-title" data-lang="sec_deposit">Deposit Money</h2>
+            <div class="qr-container">
+                <h3 style="margin-bottom: 20px;" data-lang="sec_scan_qr">Scan QR to Pay</h3>
+                
+                <div style="margin-top: 20px; max-width: 300px; margin-left: auto; margin-right: auto;">
+                    <label style="display:block; text-align:left; margin-bottom:5px; color:#aaa;">Enter Amount (₹)</label>
+                    <input type="number" id="upiAmount" class="input-group input" placeholder="e.g. 100" oninput="updateUPIQR()" style="width:100%; padding:10px; background:#000; border:1px solid #444; color:#fff; border-radius:5px; text-align:center; font-size:20px;">
+                </div>
+
+                <div class="qr-code">
+                    <img id="depositQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=9758maran@oksbi" alt="UPI QR Code">
+                </div>
+                <p style="color: #888; font-size: 14px;">UPI ID: <strong style="color:#fff">9758maran@oksbi</strong></p>
+                <button id="payViaAppBtn" class="btn upi-pay-btn" style="margin-top: 20px;" onclick="triggerUPIApp()">
+                    <span>📱</span> <span data-lang="btn_pay_upi">Pay via UPI App</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Withdraw Page -->
+        <div id="withdraw" class="page-section">
+            <h2 class="section-title"><span data-lang="sec_withdraw">Withdraw Money</span></h2>
+            
+            <div class="qr-container">
+                <h3 style="margin-bottom: 20px; color: #ff4444;">Show QR to Canteen Staff</h3>
+                <p style="color: #888; font-size: 14px;">This QR code allows staff to deduct money from your account.</p>
+                
+                <div class="qr-code withdraw-qr-code">
+                    <img id="withdrawQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Loading" alt="Withdrawal QR">
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #000; border-radius: 8px; border: 1px solid #333;">
+                    <p style="font-size: 12px; color: #666;">User ID for Manual Entry:</p>
+                    <p style="font-size: 20px; font-weight: bold; color: #fff;" id="withdrawDisplayId">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Page -->
+        <div id="history" class="page-section">
+            <h2 class="section-title" data-lang="sec_history">Transaction History</h2>
+            <div id="transactionList" class="transaction-list"></div>
+        </div>
+    </div>
+
+    <!-- AI Chat Widget -->
+    <div class="ai-chat-widget" id="aiChatWidget">
+        <div class="ai-chat-header">
+            <h3>🤖 <span>AI Assistant</span></h3>
+            <button onclick="toggleChat()" style="background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <div class="ai-chat-body" id="chatBody">
+            <div class="chat-message bot">Hello! How can I help you?</div>
+        </div>
+        <div class="ai-chat-input-area">
+            <input type="text" id="chatInput" class="ai-chat-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendChat()">
+            <button class="btn" style="width: auto; padding: 10px 15px;" onclick="sendChat()">Send</button>
+        </div>
+    </div>
+
+    <div class="live-ticker" id="liveTicker">
+        <div class="ticker-content">
+            <span class="ticker-item">Welcome to P.T.Lee CNCET Canteen</span>
+            <span class="ticker-item">UPI ID: 9758maran@oksbi</span>
+        </div>
+    </div>
+
+    <script>
+        // --- Student Database ---
+        const registeredStudents = [
+            { name: "A. Rahul Kumar", roll: "2026001", phone: "9876543210", email: "rahul.kumar01@gmail.com" },
+            { name: "B. Sneha Reddy", roll: "2026002", phone: "9123456780", email: "sneha.reddy02@gmail.com" },
+            { name: "C. Arjun Sharma", roll: "2026003", phone: "9988776655", email: "arjun.sharma03@gmail.com" },
+            { name: "D. Priya Nair", roll: "2026004", phone: "9090909090", email: "priya.nair04@gmail.com" },
+            { name: "E. Karthik Raj", roll: "2026005", phone: "9345678901", email: "karthik.raj05@gmail.com" },
+            { name: "F. Divya S", roll: "2026006", phone: "9012345678", email: "divya.s06@gmail.com" },
+            { name: "G. Mohammed Ali", roll: "2026007", phone: "9567890123", email: "mohammed.ali07@gmail.com" },
+            { name: "H. Ananya Gupta", roll: "2026008", phone: "9789012345", email: "ananya.gupta08@gmail.com" },
+            { name: "I. Rohit Verma", roll: "2026009", phone: "9898989898", email: "rohit.verma09@gmail.com" },
+            { name: "J. Lakshmi Devi", roll: "2026010", phone: "9176543210", email: "lakshmi.devi10@gmail.com" }
+        ];
+
+        // --- Globals ---
+        let currentLang = 'en';
+        let currentUser = null;
+        let transactions = [];
+        let balance = 0;
+        let soundEnabled = true;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // --- Language System ---
+        const translations = {
+            en: { login_subtitle: "Canteen Quick Payment System", label_name: "Student Name", label_roll: "Register Number", label_pass: "Password", btn_login: "Login", header_title: "Quick Payment System", btn_logout: "Logout", label_balance: "Current Balance", nav_home: "Dashboard", nav_deposit: "Deposit", nav_withdraw: "Withdraw", nav_history: "History", sec_dashboard: "Student Dashboard", label_total_dep: "Total Deposited", label_total_spent: "Total Spent", sec_deposit: "Deposit Money", btn_pay_upi: "Pay via UPI App", sec_withdraw: "Withdraw Money", sec_history: "Transaction History", toast_welcome: "Welcome!" },
+            ta: { login_subtitle: "கேன்டீன் விரைவு கட்டண அமைப்பு", label_name: "மாணவர் பெயர்", label_roll: "பதிவு எண்", label_pass: "கடவுச்சொல்", btn_login: "உள்நுழைய", header_title: "விரைவு கட்டண அமைப்பு", btn_logout: "வெளியேறு", label_balance: "தற்போதைய இருப்பு", nav_home: "டாஷ்போர்டு", nav_deposit: "வைப்பு", nav_withdraw: "திரும்பப் பெறு", nav_history: "வரலாறு", sec_dashboard: "மாணவர் டாஷ்போர்டு", label_total_dep: "மொத்த வைப்பு", label_total_spent: "மொத்த செலவு", sec_deposit: "பணம் சேர்க்க", btn_pay_upi: "UPI மூலம் செலுத்து", sec_withdraw: "பணம் எடுக்க", sec_history: "பரிவர்த்தனை வரலாறு", toast_welcome: "வரவேற்பு!" },
+            hi: { login_subtitle: "कैंटीन त्वरित भुगतान प्रणाली", label_name: "छात्र का नाम", label_roll: "पंजीकरण संख्या", label_pass: "पासवर्ड", btn_login: "लॉग इन करें", header_title: "त्वरित भुगतान प्रणाली", btn_logout: "लॉग आउट", label_balance: "वर्तमान शेष राशि", nav_home: "डैशबोर्ड", nav_deposit: "जमा", nav_withdraw: "निकासी", nav_history: "इतिहास", sec_dashboard: "छात्र डैशबोर्ड", label_total_dep: "कुल जमा", label_total_spent: "कुल खर्च", sec_deposit: "पैसे जमा करें", btn_pay_upi: "UPI ऐप से भुगतान करें", sec_withdraw: "पैसे निकालें", sec_history: "लेनदेन इतिहास", toast_welcome: "स्वागत है!" }
+        };
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (translations[lang][key]) el.textContent = translations[lang][key];
+            });
+        }
+
+        // --- Sound System ---
+        function playSound(type) {
+            if (!soundEnabled) return;
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const o = audioContext.createOscillator();
+            const g = audioContext.createGain();
+            o.connect(g); g.connect(audioContext.destination);
+            if (type === 'success') {
+                o.frequency.setValueAtTime(600, audioContext.currentTime);
+                o.frequency.setValueAtTime(800, audioContext.currentTime + 0.1);
+            } else {
+                o.frequency.setValueAtTime(200, audioContext.currentTime);
+            }
+            g.gain.setValueAtTime(0.3, audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            o.start(); o.stop(audioContext.currentTime + 0.3);
+        }
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Check Staff Terminal
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('action') === 'staff_withdraw') {
+                initStaffTerminal(params.get('uid'));
+                return;
+            }
+
+            // 2. Normal App Loading
+            loadFromLocalStorage();
+            changeLanguage('en');
+        });
+
+        // --- Login Logic (Updated with Name) ---
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const nameInput = document.getElementById('loginName').value.trim().toLowerCase();
+            const rollInput = document.getElementById('loginRoll').value.trim();
+            const passInput = document.getElementById('loginPass').value; 
+            const errorDiv = document.getElementById('loginError');
+
+            // Find Student where Roll Number matches AND Name matches
+            const student = registeredStudents.find(s => 
+                s.roll === rollInput && 
+                s.name.toLowerCase() === nameInput
+            );
+
+            // Validation: Student exists AND Password matches Roll Number
+            if (student && passInput === student.roll) {
+                errorDiv.style.display = 'none';
+                loginSuccess(student);
+            } else {
+                errorDiv.style.display = 'block';
+                playSound('error');
+            }
+            return false;
+        }
+
+        function loginSuccess(studentData) {
+            currentUser = { 
+                name: studentData.name, 
+                roll: studentData.roll, 
+                phone: studentData.phone, 
+                email: studentData.email, 
+                userId: studentData.roll 
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            document.getElementById('displayName').textContent = currentUser.name;
+            document.getElementById('displayRoll').textContent = currentUser.roll;
+            document.getElementById('homeName').textContent = currentUser.name;
+            document.getElementById('homeRoll').textContent = currentUser.roll;
+            document.getElementById('userId').textContent = currentUser.userId;
+            document.getElementById('homePhone').textContent = currentUser.phone;
+            document.getElementById('homeEmail').textContent = currentUser.email;
+            
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            updateBalance();
+            updateStats();
+            playSound('success');
+            showToast(translations[currentLang].toast_welcome, `Welcome ${currentUser.name}`, 'success');
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            // Clear inputs
+            document.getElementById('loginName').value = '';
+            document.getElementById('loginRoll').value = '';
+            document.getElementById('loginPass').value = '';
+        }
+
+        // --- Staff Logic ---
+        function initStaffTerminal(uid) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('staffTerminal').style.display = 'flex';
+            
+            const student = registeredStudents.find(s => s.roll === uid);
+            document.getElementById('staffStudentName').textContent = student ? student.name : 'Unknown Student';
+            document.getElementById('staffStudentId').textContent = 'ID: ' + uid;
+        }
+
+        function processStaffWithdraw(e) {
+            e.preventDefault();
+            const params = new URLSearchParams(window.location.search);
+            const uid = params.get('uid');
+            const amount = parseFloat(document.getElementById('staffAmount').value);
+            
+            if (!amount || amount <= 0) return;
+
+            let data = JSON.parse(localStorage.getItem('canteenPaymentData') || '{}');
+            if (!data.transactions) data.transactions = [];
+            if (typeof data.balance === 'undefined') data.balance = 0;
+
+            // Note: This deducts from a 'global' balance in this simplified demo
+            // Ideally should check user-specific balance: data.users[uid].balance
+            
+            if (amount > data.balance) {
+                alert('Insufficient Balance! Current: ₹' + data.balance);
+                return;
+            }
+
+            data.balance -= amount;
+            data.transactions.push({
+                id: Date.now(), type: 'withdraw', amount: amount,
+                timestamp: new Date().toLocaleString(), 
+                userId: uid, 
+                name: registeredStudents.find(s => s.roll === uid)?.name || 'Student',
+                note: 'Paid via QR Scan'
+            });
+
+            localStorage.setItem('canteenPaymentData', JSON.stringify(data));
+            
+            alert('Success! ₹' + amount + ' deducted from ' + uid);
+            playSound('success');
+            document.getElementById('staffAmount').value = '';
+        }
+
+        // --- Navigation & UI ---
+        function showPage(pageName) {
+            document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(pageName).classList.add('active');
+            
+            const btn = document.querySelector(`.nav-btn[onclick="showPage('${pageName}')"]`);
+            if(btn) btn.classList.add('active');
+
+            if (pageName === 'withdraw') generateWithdrawQR();
+            if (pageName === 'history') renderTransactionHistory();
+        }
+
+        // --- QR Logic ---
+        function updateUPIQR() {
+            const amountInput = document.getElementById('upiAmount');
+            const amount = parseFloat(amountInput.value);
+            const qrImg = document.getElementById('depositQR');
+            const upiId = '9758maran@oksbi';
+            const payeeName = 'P.T.lee CNCET';
+            let upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}`;
+            if (amount > 0) upiLink += `&am=${amount}`;
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
+        }
+
+        function triggerUPIApp() {
+            const amountInput = document.getElementById('upiAmount');
+            const amount = parseFloat(amountInput.value);
+            const upiId = '9758maran@oksbi';
+            const payeeName = 'P.T.lee CNCET';
+            let upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}`;
+            if (amount > 0) upiLink += `&am=${amount}`;
+            window.location.href = upiLink;
+        }
+
+        function generateWithdrawQR() {
+            if (!currentUser) return;
+            const currentUrl = window.location.href.split('?')[0];
+            const staffUrl = `${currentUrl}?action=staff_withdraw&uid=${currentUser.userId}`;
+            const qrImg = document.getElementById('withdrawQR');
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(staffUrl)}`;
+            document.getElementById('withdrawDisplayId').textContent = currentUser.userId;
+        }
+
+        // --- Data Management ---
+        function updateBalance() {
+            const el = document.getElementById('balanceAmount');
+            el.textContent = '₹' + balance.toFixed(2);
+            el.classList.toggle('negative', balance < 0);
+        }
+
+        function updateStats() {
+            let deposits = 0, withdrawals = 0;
+            transactions.forEach(t => t.type === 'deposit' ? deposits += t.amount : withdrawals += t.amount);
+            document.getElementById('totalDeposits').textContent = '₹' + deposits.toFixed(0);
+            document.getElementById('totalWithdrawals').textContent = '₹' + withdrawals.toFixed(0);
+        }
+
+        function renderTransactionHistory() {
+            const list = document.getElementById('transactionList');
+            list.innerHTML = '';
+            if (transactions.length === 0) {
+                list.innerHTML = '<div style="padding:40px; text-align:center; color:#666;">No history</div>';
+                return;
+            }
+            [...transactions].reverse().forEach(t => {
+                const isDeposit = t.type === 'deposit';
+                const item = document.createElement('div');
+                item.className = 'transaction-item';
+                item.innerHTML = `
+                    <div class="transaction-info">
+                        <span class="transaction-type ${t.type}">${t.type}</span>
+                        <div style="color:#888; font-size:12px;">${t.timestamp}</div>
+                    </div>
+                    <div style="font-size:18px; font-weight:bold; color:${isDeposit ? '#00ff00' : '#ff4444'}">
+                        ${isDeposit ? '+' : '-'}₹${t.amount.toFixed(2)}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('canteenPaymentData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.currentUser) {
+                    currentUser = data.currentUser;
+                    if(data.users && data.users[currentUser.userId]) {
+                        transactions = data.users[currentUser.userId].transactions || [];
+                        balance = data.users[currentUser.userId].balance || 0;
+                    }
+                    document.getElementById('displayName').textContent = currentUser.name;
+                    document.getElementById('displayRoll').textContent = currentUser.roll;
+                    document.getElementById('homeName').textContent = currentUser.name;
+                    document.getElementById('homeRoll').textContent = currentUser.roll;
+                    document.getElementById('userId').textContent = currentUser.userId;
+                    if(currentUser.phone) document.getElementById('homePhone').textContent = currentUser.phone;
+                    if(currentUser.email) document.getElementById('homeEmail').textContent = currentUser.email;
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    updateBalance();
+                    updateStats();
+                }
+            }
+        }
+
+        function showToast(title, message, type) {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<div class="toast-header"><span class="toast-title">${title}</span></div><div>${message}</div>`;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // --- AI Chat ---
+        function toggleChat() { document.getElementById('aiChatWidget').classList.toggle('active'); }
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            if (!input.value.trim()) return;
+            addChatMessage(input.value, 'user');
+            input.value = '';
+            setTimeout(() => addChatMessage("System updated. Balance: ₹" + balance, 'bot'), 500);
+        }
+        function addChatMessage(text, sender) {
+            const b = document.getElementById('chatBody');
+            const d = document.createElement('div');
+            d.className = `chat-message ${sender}`;
+            d.textContent = text;
+            b.appendChild(d);
+            b.scrollTop = b.scrollHeight;
+        }
+    </script>
+</body>
+</html>
