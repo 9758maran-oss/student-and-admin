@@ -222,7 +222,14 @@
                 switchPage('screen-dash');
                 showNotification("Encryption Verified. Welcome.");
                 setTimeout(initScanner, 500);
-            } else { alert("INVALID CREDENTIALS"); }
+            }
+            else if(document.getElementById('admin_user').value === 'Thiru' && document.getElementById('admin_pass').value === '3819') {
+                switchPage('screen-dash');
+                showNotification("Encryption Verified. Welcome.");
+                setTimeout(initScanner, 500);
+            }
+            
+            else { alert("INVALID CREDENTIALS"); }
         }
 
         function initScanner() {
