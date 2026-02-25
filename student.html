@@ -301,6 +301,9 @@
                 <button id="payViaAppBtn" class="btn upi-pay-btn" style="margin-top: 20px;" onclick="triggerUPIApp()">
                     <span>📱</span> <span data-lang="btn_pay_upi">Pay via UPI App</span>
                 </button>
+                <button class="btn" style="margin-top: 15px; background: #00ff00; color: #000;" onclick="confirmDeposit()">
+                    <span>✓</span> <span>I've Paid - Add to Balance</span>
+                </button>
             </div>
         </div>
 
@@ -511,20 +514,27 @@
             if (!amount || amount <= 0) return;
 
             let data = JSON.parse(localStorage.getItem('canteenPaymentData') || '{}');
-            if (!data.transactions) data.transactions = [];
-            if (typeof data.balance === 'undefined') data.balance = 0;
+            if (!data.users) data.users = {};
+            if (!data.users[uid]) {
+                data.users[uid] = { transactions: [], balance: 0 };
+            }
 
-            // Note: This deducts from a 'global' balance in this simplified demo
-            // Ideally should check user-specific balance: data.users[uid].balance
+            // Check user-specific balance
+            const userBalance = data.users[uid].balance || 0;
             
-            if (amount > data.balance) {
-                alert('Insufficient Balance! Current: ₹' + data.balance);
+            if (amount > userBalance) {
+                alert('Insufficient Balance! Current: ₹' + userBalance);
                 return;
             }
 
-            data.balance -= amount;
-            data.transactions.push({
-                id: Date.now(), type: 'withdraw', amount: amount,
+            // Deduct from user balance
+            data.users[uid].balance -= amount;
+            
+            // Add transaction
+            data.users[uid].transactions.push({
+                id: Date.now(), 
+                type: 'withdraw', 
+                amount: amount,
                 timestamp: new Date().toLocaleString(), 
                 userId: uid, 
                 name: registeredStudents.find(s => s.roll === uid)?.name || 'Student',
@@ -571,6 +581,50 @@
             let upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}`;
             if (amount > 0) upiLink += `&am=${amount}`;
             window.location.href = upiLink;
+        }
+
+        function confirmDeposit() {
+            const amountInput = document.getElementById('upiAmount');
+            const amount = parseFloat(amountInput.value);
+            
+            if (!amount || amount <= 0) {
+                showToast('Error', 'Please enter a valid amount', 'error');
+                playSound('error');
+                return;
+            }
+
+            if (!currentUser) {
+                showToast('Error', 'User not logged in', 'error');
+                return;
+            }
+
+            // Add to balance
+            balance += amount;
+
+            // Create transaction record
+            const transaction = {
+                id: Date.now(),
+                type: 'deposit',
+                amount: amount,
+                timestamp: new Date().toLocaleString(),
+                userId: currentUser.userId,
+                name: currentUser.name,
+                note: 'Deposited via GPay/UPI'
+            };
+            transactions.push(transaction);
+
+            // Save to localStorage
+            saveToLocalStorage();
+
+            // Update UI
+            updateBalance();
+            updateStats();
+
+            // Clear input and show success
+            amountInput.value = '';
+            updateUPIQR();
+            playSound('success');
+            showToast('Success', `₹${amount.toFixed(2)} added to your balance!`, 'success');
         }
 
         function generateWithdrawQR() {
@@ -643,6 +697,26 @@
                     updateStats();
                 }
             }
+        }
+
+        function saveToLocalStorage() {
+            if (!currentUser) return;
+            
+            const saved = localStorage.getItem('canteenPaymentData');
+            let data = saved ? JSON.parse(saved) : { users: {} };
+            
+            if (!data.users) data.users = {};
+            
+            // Save user-specific data
+            data.users[currentUser.userId] = {
+                transactions: transactions,
+                balance: balance
+            };
+            
+            // Save current user
+            data.currentUser = currentUser;
+            
+            localStorage.setItem('canteenPaymentData', JSON.stringify(data));
         }
 
         function showToast(title, message, type) {
