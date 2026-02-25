@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.T.Lee CNCET | Canteen Management System</title>
+    <style>
+        :root {
+            --bg-deep: #0a0a0a;
+            --surface: #141414;
+            --accent: #ffffff;
+            --accent-dim: #222222;
+            --neon-green: #00ff85;
+            --neon-blue: #00e0ff;
+            --danger: #ff3e3e;
+            --text-primary: #ffffff;
+            --text-secondary: #808080;
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+        }
+
+        body { 
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+            color: var(--text-primary); 
+            overflow: hidden; 
+            height: 100vh; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .bg-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 8s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-20px) translateX(10px); }
+            50% { transform: translateY(-10px) translateX(-10px); }
+            75% { transform: translateY(-30px) translateX(5px); }
+        }
+
+        /* Main Container */
+        .login-container {
+            background: var(--surface);
+            border-radius: 30px;
+            padding: 50px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid var(--accent-dim);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #000;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 133, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(0, 255, 133, 0); }
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* User Type Selection */
+        .user-type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .user-type-btn {
+            padding: 25px 20px;
+            background: var(--bg-deep);
+            border: 2px solid var(--accent-dim);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-type-btn:hover {
+            border-color: var(--neon-green);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 133, 0.2);
+        }
+
+        .user-type-btn.active {
+            background: linear-gradient(135deg, rgba(0, 255, 133, 0.1), rgba(0, 224, 255, 0.1));
+            border-color: var(--neon-green);
+        }
+
+        .user-type-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .user-type-btn:hover::before {
+            left: 100%;
+        }
+
+        .user-type-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .user-type-label {
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--accent-dim);
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="bg-grid"></div>
+    
+    <!-- Main Login Container -->
+    <div class="login-container">
+        <div class="header">
+            <div class="logo">🍽️</div>
+            <h1>Canteen System</h1>
+            <p class="subtitle">P.T.Lee CNCET</p>
+        </div>
+
+        <!-- User Type Selection -->
+        <div class="user-type-selector">
+            <div class="user-type-btn" onclick="window.location.href='student.html'">
+                <div class="user-type-icon">👨‍🎓</div>
+                <div class="user-type-label">Student</div>
+            </div>
+            <div class="user-type-btn" onclick="window.location.href='admin.html'">
+                <div class="user-type-icon">🔐</div>
+                <div class="user-type-label">Admin</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2026 P.T.Lee CNCET. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+
+        // Create floating particles
+        function createParticles() {
+            const container = document.body;
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        createParticles();
+    </script>
+</body>
+</html>
